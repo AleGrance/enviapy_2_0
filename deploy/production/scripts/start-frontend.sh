@@ -15,4 +15,4 @@ source "$FRONTEND_ENV_FILE"
 set +a
 
 cd "$ROOT_DIR/frontend"
-exec npm run start
+exec ./node_modules/.bin/next start -p "${PORT:-3000}"

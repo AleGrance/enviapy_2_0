@@ -104,9 +104,9 @@ Use `nginx/whatsapp-platform.conf.example` as a base.
 
 That config:
 
-- sends `/socket.io/` to backend port `3001`
-- sends API/static backend routes to backend port `3001`
-- sends everything else to frontend port `3000`
+- sends `/socket.io/` to backend port `3002`
+- sends API/static backend routes to backend port `3002`
+- sends everything else to frontend port `3003`
 
 After adjusting the domain:
 
@@ -131,5 +131,6 @@ npx ts-node prisma/seed.ts
 
 - This setup does not modify Docker files, compose files or development deployment behavior.
 - Redis is assumed to run locally on Debian, but you can point `REDIS_HOST` to a remote instance if needed.
+- On a shared server, set a dedicated `REDIS_DB` and/or `BULL_PREFIX` so BullMQ keys stay isolated from other apps.
 - PostgreSQL can be local or remote as long as `DATABASE_URL` is correct.
 - Chromium is installed at the system level for `whatsapp-web.js`.

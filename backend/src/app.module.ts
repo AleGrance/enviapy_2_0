@@ -15,9 +15,11 @@ import { PrismaModule } from './prisma.module';
 @Module({
   imports: [
     BullModule.forRoot({
+      prefix: process.env.BULL_PREFIX || 'bull',
       connection: {
         host: process.env.REDIS_HOST || 'redis',
         port: parseInt(process.env.REDIS_PORT || '6379'),
+        db: parseInt(process.env.REDIS_DB || '0'),
       },
     }),
     PrismaModule,
