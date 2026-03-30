@@ -31,13 +31,13 @@ if [[ ! -e "$ROOT_DIR/.wwebjs_auth" ]]; then
 fi
 
 pushd "$ROOT_DIR/backend" >/dev/null
-npm ci
+npm ci --include=dev
 npx prisma generate
 npm run build
 popd >/dev/null
 
 pushd "$ROOT_DIR/frontend" >/dev/null
-npm ci
+npm ci --include=dev
 load_env "$FRONTEND_ENV_FILE"
 npm run build
 popd >/dev/null
