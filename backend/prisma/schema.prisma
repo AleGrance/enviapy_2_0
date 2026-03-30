@@ -1,0 +1,218 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users          User[]
+  whatsappNumbers WhatsAppNumber[]
+  conversations  Conversation[]
+  messages       Message[]
+  campaigns      Campaign[]
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  role      Role     @default(CLIENT)
+  status    UserStatus @default(ACTIVE)
+  accountExpiresAt DateTime?
+  campaignsEnabled Boolean @default(false)
+  tenantId  String
+  numberId  String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  number WhatsAppNumber? @relation(fields: [numberId], references: [id], onDelete: SetNull)
+  campaignsCreated Campaign[]
+}
+
+model WhatsAppNumber {
+  id          String              @id @default(uuid())
+  tenantId    String
+  name        String
+  phoneNumber String?
+  status      WhatsAppStatus      @default(DISCONNECTED)
+  sessionName String              @unique
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversations Conversation[]
+  messages      Message[]
+  users         User[]
+  campaigns     Campaign[]
+}
+
+model Conversation {
+  id            String   @id @default(uuid())
+  tenantId      String
+  numberId      String
+  waId          String
+  name          String?
+  lastMessageAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  number   WhatsAppNumber @relation(fields: [numberId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@unique([numberId, waId])
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  tenantId       String
+  numberId       String
+  conversationId String
+  campaignId     String?
+  campaignRecipientId String?
+  direction      Direction
+  from           String
+  to             String
+  type           MessageType  @default(TEXT)
+  text           String?
+  mediaPath      String?
+  mimeType       String?
+  providerMessageId String?   @unique
+  deliveryStatus   MessageDeliveryStatus?
+  timestamp      DateTime
+  createdAt      DateTime     @default(now())
+
+  tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  number       WhatsAppNumber @relation(fields: [numberId], references: [id], onDelete: Cascade)
+  conversation Conversation   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  campaign     Campaign?      @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  campaignRecipient CampaignRecipient? @relation(fields: [campaignRecipientId], references: [id], onDelete: SetNull)
+
+  @@index([campaignId])
+  @@index([campaignRecipientId])
+}
+
+model Campaign {
+  id                 String               @id @default(uuid())
+  tenantId           String
+  createdById        String
+  numberId           String
+  name               String
+  text               String?
+  recipientsFileName String
+  recipientsFilePath String
+  status             CampaignStatus       @default(PENDING)
+  totalRecipients    Int                  @default(0)
+  processedRecipients Int                 @default(0)
+  sentRecipients     Int                  @default(0)
+  failedRecipients   Int                  @default(0)
+  scheduledAt        DateTime?
+  startedAt          DateTime?
+  completedAt        DateTime?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy   User             @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  number      WhatsAppNumber   @relation(fields: [numberId], references: [id], onDelete: Cascade)
+  recipients  CampaignRecipient[]
+  attachments CampaignAttachment[]
+  messages    Message[]
+
+  @@index([tenantId, createdAt])
+  @@index([createdById])
+  @@index([numberId])
+}
+
+model CampaignRecipient {
+  id           String                  @id @default(uuid())
+  campaignId   String
+  phoneNumber  String
+  status       CampaignRecipientStatus @default(PENDING)
+  errorMessage String?
+  sentAt       DateTime?
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@index([campaignId])
+  @@index([campaignId, status])
+}
+
+model CampaignAttachment {
+  id           String   @id @default(uuid())
+  campaignId   String
+  originalName String
+  storagePath  String
+  mimeType     String
+  size         Int
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId, sortOrder])
+}
+
+enum Role {
+  SUPER_ADMIN
+  TENANT_ADMIN
+  CLIENT
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum WhatsAppStatus {
+  CONNECTED
+  DISCONNECTED
+  CONNECTING
+}
+
+enum Direction {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  AUDIO
+  VIDEO
+  DOCUMENT
+  STICKER
+}
+
+enum MessageDeliveryStatus {
+  SENT
+  RECEIVED
+  READ
+}
+
+enum CampaignStatus {
+  PENDING
+  SCHEDULED
+  PROCESSING
+  COMPLETED
+  PARTIAL
+  FAILED
+}
+
+enum CampaignRecipientStatus {
+  PENDING
+  SENT
+  FAILED
+}
