@@ -21,16 +21,24 @@ async function main() {
   const hashed = await bcrypt.hash('admin123', 10);
   const admin = await prisma.user.upsert({
     where: { email: 'admin@example.com' },
-    update: { campaignsEnabled: true },
+    update: {
+      password: hashed,
+      role: 'SUPER_ADMIN',
+      status: 'ACTIVE',
+      campaignsEnabled: true,
+      tenantId: tenant.id,
+      accountExpiresAt: null,
+    },
     create: {
       email: 'admin@example.com',
       password: hashed,
       role: 'SUPER_ADMIN',
+      status: 'ACTIVE',
       campaignsEnabled: true,
       tenantId: tenant.id,
     },
   });
-  console.log('Super admin user created:', admin.email);
+  console.log('Super admin user upserted:', admin.email);
   console.log('\nDefault credentials:');
   console.log('  Email: admin@example.com');
   console.log('  Password: admin123');
