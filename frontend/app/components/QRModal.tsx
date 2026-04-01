@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getSocket } from '../services/socket';
 import { numbersApi } from '../services/api';
 import { X, Loader2 } from 'lucide-react';
@@ -14,14 +14,26 @@ interface QRModalProps {
 export default function QRModal({ numberId, numberName, onClose, onConnected }: QRModalProps) {
   const [qrData, setQrData] = useState<string | null>(null);
   const [status, setStatus] = useState<'waiting' | 'linked' | 'connected' | 'failed'>('waiting');
+  const qrDataRef = useRef<string | null>(null);
+  const statusRef = useRef<'waiting' | 'linked' | 'connected' | 'failed'>('waiting');
+
+  useEffect(() => {
+    qrDataRef.current = qrData;
+  }, [qrData]);
+
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
 
   useEffect(() => {
     const socket = getSocket();
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+    let isDisposed = false;
 
     const loadLatestQr = async () => {
       try {
         const data = await numbersApi.getQr(numberId);
-        if (data?.qr) {
+        if (!isDisposed && data?.qr) {
           setQrData(data.qr);
         }
       } catch (e) {
@@ -30,6 +42,11 @@ export default function QRModal({ numberId, numberName, onClose, onConnected }: 
     };
 
     loadLatestQr();
+    pollTimer = setInterval(() => {
+      if (statusRef.current === 'waiting' && !qrDataRef.current) {
+        void loadLatestQr();
+      }
+    }, 3000);
 
     const handleQr = (data: { numberId: string; qr: string }) => {
       if (data.numberId === numberId) {
@@ -66,6 +83,10 @@ export default function QRModal({ numberId, numberName, onClose, onConnected }: 
     socket.on('number:status', handleNumberStatus);
 
     return () => {
+      isDisposed = true;
+      if (pollTimer) {
+        clearInterval(pollTimer);
+      }
       socket.off('qr', handleQr);
       socket.off('number:linked', handleLinked);
       socket.off('number:status', handleNumberStatus);

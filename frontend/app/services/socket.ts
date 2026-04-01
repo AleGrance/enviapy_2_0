@@ -9,8 +9,9 @@ export function getSocket(): Socket {
   if (!socket) {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     socket = io(WS_URL, {
+      path: '/socket.io',
       auth: { token },
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],
       autoConnect: true,
     });
   }
