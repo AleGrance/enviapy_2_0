@@ -14,6 +14,8 @@ const DEFAULT_INBOUND_LOG_MAX_LENGTH = 20000;
 const DEFAULT_INBOUND_LOG_FILE_NAME = 'wa-inbound.log';
 const SINGLETON_LOCK_RETRY_DELAY_MS = 3000;
 const MAX_SINGLETON_LOCK_RETRIES = 5;
+const DEFAULT_WA_AUTH_TIMEOUT_MS = 120000;
+const DEFAULT_WA_PROTOCOL_TIMEOUT_MS = 120000;
 
 @Injectable()
 export class WhatsAppManagerService implements OnModuleInit, OnModuleDestroy {
@@ -26,6 +28,9 @@ export class WhatsAppManagerService implements OnModuleInit, OnModuleDestroy {
   private readonly inboundLogMaxLength = Number(process.env.WA_LOG_INBOUND_MAX_LENGTH || DEFAULT_INBOUND_LOG_MAX_LENGTH);
   private readonly logInboundToFile = (process.env.WA_LOG_INBOUND_FILE || 'true').toLowerCase() !== 'false';
   private readonly inboundLogFileName = process.env.WA_LOG_INBOUND_FILE_NAME || DEFAULT_INBOUND_LOG_FILE_NAME;
+  private readonly waAuthTimeoutMs = Number(process.env.WA_AUTH_TIMEOUT_MS || DEFAULT_WA_AUTH_TIMEOUT_MS);
+  private readonly waProtocolTimeoutMs = Number(process.env.WA_PROTOCOL_TIMEOUT_MS || DEFAULT_WA_PROTOCOL_TIMEOUT_MS);
+  private readonly puppeteerExecutablePath = String(process.env.PUPPETEER_EXECUTABLE_PATH || '').trim();
 
   private mapAckToDeliveryStatus(ack: number): MessageDeliveryStatus | null {
     if (ack >= 3) return MessageDeliveryStatus.READ;
@@ -132,8 +137,15 @@ export class WhatsAppManagerService implements OnModuleInit, OnModuleDestroy {
 
     const client = new Client({
       authStrategy: new LocalAuth({ clientId: number.sessionName, dataPath: sessionPath }),
+      authTimeoutMs: Number.isFinite(this.waAuthTimeoutMs) && this.waAuthTimeoutMs > 0
+        ? this.waAuthTimeoutMs
+        : DEFAULT_WA_AUTH_TIMEOUT_MS,
       puppeteer: {
         headless: true,
+        ...(this.puppeteerExecutablePath ? { executablePath: this.puppeteerExecutablePath } : {}),
+        protocolTimeout: Number.isFinite(this.waProtocolTimeoutMs) && this.waProtocolTimeoutMs > 0
+          ? this.waProtocolTimeoutMs
+          : DEFAULT_WA_PROTOCOL_TIMEOUT_MS,
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
@@ -142,6 +154,8 @@ export class WhatsAppManagerService implements OnModuleInit, OnModuleDestroy {
           '--no-first-run',
           '--no-zygote',
           '--disable-gpu',
+          '--disable-extensions',
+          '--window-size=1280,720',
         ],
       },
     });
