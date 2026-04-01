@@ -134,3 +134,4 @@ npx ts-node prisma/seed.ts
 - On a shared server, set a dedicated `REDIS_DB` and/or `BULL_PREFIX` so BullMQ keys stay isolated from other apps.
 - PostgreSQL can be local or remote as long as `DATABASE_URL` is correct.
 - Chromium is installed at the system level for `whatsapp-web.js`.
+- If WhatsApp linking fails only in production and headless Chromium shows `WhatsApp works with Google Chrome 85+`, the server browser is too old. Install a newer Chrome/Chromium build and point `PUPPETEER_EXECUTABLE_PATH` to that binary.
